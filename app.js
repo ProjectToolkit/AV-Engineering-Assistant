@@ -1,6 +1,6 @@
 const $ = id => document.getElementById(id);
-let BOM = [], PULL = [], PAGES = [];
-document.querySelectorAll(".tab").forEach(b => b.onclick = () => { document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", x == b)); ["t1","t2","t3","t4"].forEach(t => $(t).hidden = t != b.dataset.t); document.querySelector(".bar").style.display = ["t1","t3"].includes(b.dataset.t) ? "" : "none"; });
+let BOM = [], PULL = [], PAGES = [], LAST_AUDIT = [];
+document.querySelectorAll(".tab").forEach(b => b.onclick = () => { document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", x == b)); ["t1","t2","t3","t4","t5"].forEach(t => $(t).hidden = t != b.dataset.t); document.querySelector(".bar").style.display = ["t1","t3"].includes(b.dataset.t) ? "" : "none"; });
 // ---------- parsing
 const g = (r, ...n) => { for (const k in r) if (n.includes(nk(k)) && String(r[k]).trim() !== "") return String(r[k]).trim(); return ""; };
 const num = (r, ...n) => parseFloat(g(r, ...n)) || 0;
@@ -65,7 +65,7 @@ function runAudit() {
   if (unk.length) add("INFO", "Data", "specs", `${unk.length} of ${D.length} lines have no spec in brands.js. Most lines: ${Object.entries(bc).sort((a, b) => b[1] - a[1]).slice(0, 8).map(e => e[0] + " " + e[1]).join(", ")}`);
   if (D.length && !D.some(d => d.isSw)) { let w = 0, n = 0; D.forEach(d => { if (POE_W[d.poe]) { w += POE_W[d.poe] * d.qty; n += d.qty; } });
     if (n) add("INFO", "PoE", "no switch in BOM", `${n} PoE devices need ${w.toFixed(0)} W (class allocation) - no switch listed, so budget not checked. Size the switch for at least ${(w / 0.8).toFixed(0)} W.`); }
-  const o = { CRITICAL: 0, ERROR: 1, WARNING: 2, INFO: 3 }; F.sort((a, b) => o[a[0]] - o[b[0]]);
+  const o = { CRITICAL: 0, ERROR: 1, WARNING: 2, INFO: 3 }; F.sort((a, b) => o[a[0]] - o[b[0]]); LAST_AUDIT = F;
   const cnt = k => F.filter(f => f[0] == k).length, room = $("roomrow").hidden ? "" : ` from "${$("room").value}"`;
   const head = `<p class="mb-2 text-sm"><b>${D.length} equipment lines${room}</b>, ${P.length} cables. ${cnt("CRITICAL")} critical, ${cnt("ERROR")} errors, ${cnt("WARNING")} warnings, ${cnt("INFO")} notes.${P.length ? "" : " No cable pull sheet loaded, so cable, Dante and AVoIP checks were skipped."}</p>`;
   const list = D.length ? `<details class="mt-3 text-sm"><summary class="cursor-pointer font-semibold">Loaded equipment (${D.length})</summary><table class="w-full mt-1">${D.map(d => `<tr class="border-b"><td class="p-1">${d.qty}x</td><td>${d.make}</td><td>${d.model}</td><td>${d.poe && d.poe != "none" ? "PoE " + d.poe : ""}</td><td>${d.known ? "" : "no spec"}</td></tr>`).join("")}</table></details>` : "";
@@ -114,7 +114,7 @@ function progress() { $("loaded").textContent = `${BOM.length} devices, ${PULL.l
 $("clr").onclick = () => { BOM = []; PULL = []; WIDE = []; $("roomrow").hidden = true; $("audit").innerHTML = ""; $("vmsg").textContent = ""; progress(); };
 $("rerun").onclick = () => { if (BOM.length || PULL.length) runAudit(); };
 
-// ---------- estimating-BOM import (SKS format: one column per room/scenario)
+// ---------- estimating-BOM import (one column per room/scenario)
 let WIDE = [];
 function pickRoom() {
   const row = $("roomrow"); if (!WIDE.length) { row.hidden = true; return; }

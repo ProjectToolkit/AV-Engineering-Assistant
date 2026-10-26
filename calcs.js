@@ -12,12 +12,29 @@ const MM = ["1.5", "2.5", "4", "6", "10", "16"];
 const ARS = ["16:9", "16:10", "4:3", "21:9"];
 const aspect = s => { const [w, h] = String(s).split(":").map(Number); return w / h; };
 const lines = t => String(t || "").split("\n").map(s => s.trim()).filter(Boolean);
+// ---------- room model (shared by the Project tab and the calculators)
+const ROOM_FIELDS = [["rw", "Room width (m)", 6], ["rl", "Room length (m)", 8], ["ch", "Ceiling height (m)", 2.7], ["tw", "Table width, across the room (m)", 1.2], ["tl", "Table length, away from the camera (m)", 3.6],
+  ["td", "Camera wall to nearest table edge (m)", 1.0], ["seats", "Seats along each side of the table", 6], ["fv", "Farthest viewer (m, blank = far end of table)", NaN], ["ar", "Display aspect ratio", "16:9"], ["eh", "Display % element height", 2.5], ["bot", "Display bottom above floor (m)", 1.0],
+  ["hfov", "Camera horizontal FOV (deg)", 90], ["th", "Talker mouth height (m)", 1.2], ["ear", "Listener ear height (m)", 1.2], ["af", "Floor absorption (alpha)", 0.2], ["ac", "Ceiling absorption (alpha)", 0.6], ["aw", "Wall absorption (alpha)", 0.1],
+  ["tg", "Target RT60 (s)", 0.5], ["nm", "Planned ceiling mics (optional)", NaN], ["ns", "Planned ceiling speakers (optional)", NaN]];
+const ROOM = Object.fromEntries(ROOM_FIELDS.map(f => [f[0], f[2]]));
+const PROJ = { name: "", calcs: {} };
+// calculator field -> room key
+const RMAP = { 1: { fv: "fv", ar: "ar", eh: "eh", bot: "bot" }, 2: { dist: "fv" }, 3: { h: "hfov", ar: "ar", rw: "rw", rl: "rl", tw: "tw", tl: "tl", td: "td", d: "fv", sn: "seats" }, 4: { ch: "ch", th: "th", rw: "rw", rl: "rl" }, 5: { ch: "ch", ear: "ear", rw: "rw", rl: "rl" },
+  14: { L: "rl", W: "rw", H: "ch", af: "af", ac: "ac", aw: "aw", tg: "tg" } };
+const NOSAVE = { 1: ["u", "cv"] };
+const roomVal = k => k == "fv" ? (has(ROOM.fv) ? ROOM.fv : ROOM.td + ROOM.tl) : ROOM[k];
+function fieldDefault(c, f) {
+  const m = (RMAP[c.id] || {})[f[0]]; if (m) { const x = roomVal(m); if (x !== undefined && !(typeof x == "number" && isNaN(x))) return x; }
+  const sv = PROJ.calcs[c.id]; if (sv && f[0] in sv && sv[f[0]] !== null) return sv[f[0]]; return f[2];
+}
+function calcValues(c) { const v = {}; c.f.forEach(f => { const t = f[3] || "num", x = fieldDefault(c, f); v[f[0]] = t == "num" ? parseFloat(x) : String(x); }); return v; }
 const selOpt = (arr, id) => arr.find(o => o.split("|")[0] == String(id).split("|")[0]);
 
 const CALCS = [
   { id: 1, name: "Display size & viewing distance", group: "core", about: "Determine suitable screen sizes for meeting rooms",
-    f: [["m", "Viewing method", "BDM", "sel", ["BDM|BDM (Basic Decision Making)", "ADM|ADM (Analytical Decision Making)"]], ["u", "Distance unit", "ft", "sel", ["m|Metres", "ft|Feet"]],
-      ["fv", "Farthest viewer distance", 20, "num", null, { h: "Horizontal distance from display to farthest viewer" }], ["ar", "Aspect ratio", "16:9", "sel", ARS],
+    f: [["m", "Viewing method", "BDM", "sel", ["BDM|BDM (Basic Decision Making)", "ADM|ADM (Analytical Decision Making)"]], ["u", "Distance unit", "m", "sel", ["m|Metres", "ft|Feet"]],
+      ["fv", "Farthest viewer distance", 4.6, "num", null, { h: "Horizontal distance from display to farthest viewer" }], ["ar", "Aspect ratio", "16:9", "sel", ARS],
       ["eh", "% Element height", 2.5, "num", null, { h: "Smallest critical element as a % of screen height. Typical 1.5% (small text) to 3.5% (large text/graphics).", p: [["1.5% (Fine)", 1.5], ["2.5% (Standard)", 2.5], ["3.5% (Large)", 3.5]] }],
       ["k", "Acuity factor", 200, "num", null, { h: "AVIXA acuity factor used in the BDM formula. Confirm against your copy of the standard." }],
       ["cv", "Closest viewer distance (optional)", NaN], ["bot", "Bottom of screen above floor (m)", 1.0]],
@@ -42,10 +59,10 @@ const CALCS = [
   { id: 3, name: "Camera field of view", group: "core", about: "Confirm camera coverage for room and table layouts",
     f: [["h", "Horizontal FOV (deg)", 90, "num", null, { h: "Camera is on the front wall, centred, facing into the room", p: [["70°", 70], ["90°", 90], ["120°", 120], ["180°", 180]] }], ["vf", "Vertical FOV (deg, blank = derive)", NaN], ["ar", "Aspect ratio", "16:9", "sel", ARS],
       ["rw", "Room width (m)", 6], ["rl", "Room length (m)", 8], ["tw", "Table width, across the room (m)", 1.2], ["tl", "Table length, away from camera (m)", 3.6], ["td", "Camera wall to nearest table edge (m)", 1.0],
-      ["d", "Distance to subjects D (m)", 4, "num", null, { h: "Used for the coverage width marker, e.g. the farthest seat" }], ["p", "Seat pitch (m)", 0.6], ["cw", "Width to cover (m, optional)", NaN]],
+      ["d", "Distance to subjects D (m)", 4, "num", null, { h: "Used for the coverage width marker, e.g. the farthest seat" }], ["sn", "Seats along each side of the table", 6], ["cw", "Width to cover (m, optional)", NaN]],
     run: v => { const full = v.h >= 179, t = Math.tan(Math.min(v.h, 179.5) * DEG / 2), w = 2 * v.d * t, vf = has(v.vf) ? v.vf : 2 * Math.atan(t / aspect(v.ar)) / DEG, ht = 2 * v.d * Math.tan(vf * DEG / 2);
       const near = v.td, tMin = v.tw / 2 / t, tIn = v.tw / 2 <= near * t + 1e-9, rIn = v.rw / 2 <= v.rl * t + 1e-9, wallW = 2 * v.rl * t;
-      const st = [["Coverage height", full ? "full height" : `${R(ht)} m`], ["Vertical FOV", `${R(vf, 1)} deg`], ["Table", tIn ? "fully in view" : `front corners cut off - need the table at least ${R(tMin)} m from the camera, or a wider lens`], ["Width seen at the far wall", full ? "full room width" : `${R(wallW)} m of ${R(v.rw)} m room width${rIn ? " (whole width)" : ""}`], ["Seats along each side of the table", `${Math.floor(v.tl / v.p)} at ${R(v.p)} m pitch`]];
+      const st = [["Coverage height", full ? "full height" : `${R(ht)} m`], ["Vertical FOV", `${R(vf, 1)} deg`], ["Table", tIn ? "fully in view" : `front corners cut off - need the table at least ${R(tMin)} m from the camera, or a wider lens`], ["Width seen at the far wall", full ? "full room width" : `${R(wallW)} m of ${R(v.rw)} m room width${rIn ? " (whole width)" : ""}`], ["Seats along each side of the table", `${v.sn} at ${R(v.tl / Math.max(v.sn, 1))} m pitch (${v.sn * 2} seats in total)`]];
       if (has(v.cw)) st.push([`Mount distance to cover ${R(v.cw)} m`, `${R(v.cw / (2 * t))} m`]);
       return { head: full ? ["Coverage width", "Wall to wall", "", `180° sees the whole front half of the room at any distance`] : ["Coverage width", R(w), "m", `at ${R(v.d)} m`], stats: st, steps: ["W = 2 x D x tan(HFOV / 2)", full ? "At 180 degrees the lens sees everything in front of the camera plane (practically limited by lens edge quality)" : `W = 2 x ${v.d} x tan(${v.h / 2} deg) = ${R(w)} m`, `Table front corners in view when table width / 2 <= distance x tan(HFOV / 2)`, `${R(v.tw / 2)} <= ${R(near)} x ${R(t, 3)} = ${R(near * t)} -> ${tIn ? "yes" : "no"}`], notes: ["Use the usable FOV after digital zoom or framing crop, not the lens maximum. Seats are drawn for layout only."] }; } },
   { id: 4, name: "Microphone coverage", group: "core", about: "Estimate ceiling microphone placement and coverage",
@@ -132,7 +149,7 @@ const CALCS = [
 ];
 
 // ---------- rendering
-let cur = null;
+let cur = null, LASTRES = null;
 const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
 function showList() {
   cur = null;
@@ -142,29 +159,35 @@ function showList() {
 }
 function openCalc(id) {
   cur = id; const c = CALCS.find(x => x.id == id);
-  const field = f => { const t = f[3] || "num", o = f[5] || {}, base = `data-k="${f[0]}" id="f_${f[0]}"`;
-    const inp = t == "sel" ? `<select ${base} class="w-full">${f[4].map(op => { const lab = op.includes("|") ? op.split("|")[1] : op, val = op.split("|")[0]; return `<option value="${esc(val)}" ${val == String(f[2]) ? "selected" : ""}>${esc(lab)}</option>`; }).join("")}</select>`
-      : t == "area" ? `<textarea ${base} rows="6" class="w-full">${esc(f[2])}</textarea>` : `<input ${base} type="number" step="any" value="${has(f[2]) ? f[2] : ""}" class="w-full">`;
-    return `<label class="block text-xs" style="color:var(--mute);${t == "area" || o.p ? "grid-column:1/-1" : ""}">${f[1]}${inp}${o.h ? `<span class="hint">${o.h}</span>` : ""}${o.p ? `<span class="pres">${o.p.map(p => `<button type="button" class="pre" data-for="f_${f[0]}" data-v="${p[1]}">${p[0]}</button>`).join("")}</span>` : ""}</label>`; };
-  cq("calcs").innerHTML = `<button class="btn alt mb-3" id="back">&larr; All calculators</button><div class="rc"><h3 class="font-bold mb-3 text-lg">${c.id}. ${c.name}</h3><div class="grid sm:grid-cols-2 gap-x-4 gap-y-3">${c.f.map(field).join("")}</div><button class="btn calcbtn" id="go">Calculate</button></div><div id="cres"></div>`;
+  const rmap = RMAP[id] || {};
+  const field = f => { const t = f[3] || "num", o = f[5] || {}, base = `data-k="${f[0]}" id="f_${f[0]}"`, def = fieldDefault(c, f), fromRoom = !!rmap[f[0]], nd = parseFloat(def);
+    const inp = t == "sel" ? `<select ${base} class="w-full">${f[4].map(op => { const lab = op.includes("|") ? op.split("|")[1] : op, val = op.split("|")[0]; return `<option value="${esc(val)}" ${val == String(def) ? "selected" : ""}>${esc(lab)}</option>`; }).join("")}</select>`
+      : t == "area" ? `<textarea ${base} rows="6" class="w-full">${esc(def)}</textarea>` : `<input ${base} type="number" step="any" value="${has(nd) ? nd : ""}" class="w-full">`;
+    return `<label class="block text-xs" style="color:var(--mute);${t == "area" || o.p ? "grid-column:1/-1" : ""}">${f[1]}${fromRoom ? ' <span class="roomtag">room</span>' : ""}${inp}${o.h ? `<span class="hint">${o.h}</span>` : ""}${o.p ? `<span class="pres">${o.p.map(p => `<button type="button" class="pre" data-for="f_${f[0]}" data-v="${p[1]}">${p[0]}</button>`).join("")}</span>` : ""}</label>`; };
+  cq("calcs").innerHTML = `<button class="btn alt mb-3" id="back">&larr; All calculators</button><div class="rc"><h3 class="font-bold mb-1 text-lg">${c.id}. ${c.name}</h3>${Object.keys(rmap).length ? `<p class="text-xs mb-3" style="color:var(--mute)">Fields tagged <span class="roomtag">room</span> are filled from the room design${PROJ.name ? ` "${esc(PROJ.name)}"` : ""}. <a href="#" id="editroom" style="color:var(--accent-text);text-decoration:underline">Edit room</a></p>` : "<div class=\"mb-2\"></div>"}<div class="grid sm:grid-cols-2 gap-x-4 gap-y-3">${c.f.map(field).join("")}</div><button class="btn calcbtn" id="go">Calculate</button></div><div id="cres"></div>`;
   cq("back").onclick = showList; let done = false;
   const go = () => { done = true; calcRun(); };
   cq("go").onclick = go;
   cq("calcs").querySelectorAll("[data-k]").forEach(el => { el.oninput = el.onchange = () => { syncPre(); if (done) calcRun(); }; el.onkeydown = e => { if (e.key == "Enter" && el.tagName != "TEXTAREA") go(); }; });
   cq("calcs").querySelectorAll(".pre").forEach(b => b.onclick = () => { cq(b.dataset.for).value = b.dataset.v; syncPre(); if (done) calcRun(); });
+  const er = cq("editroom"); if (er) er.onclick = e => { e.preventDefault(); document.querySelector('.tab[data-t="t5"]').click(); };
+  if (id == 1) { let pu = cq("f_u").value; cq("f_u").addEventListener("change", () => { const k = cq("f_u").value == "ft" ? 3.2808 : 1 / 3.2808; if (pu != cq("f_u").value) ["fv", "cv"].forEach(n => { const el = cq("f_" + n), x = parseFloat(el.value); if (has(x)) el.value = +(x * k).toFixed(2); }); pu = cq("f_u").value; if (done) calcRun(); }); }
   syncPre(); go();
 }
 function syncPre() { document.querySelectorAll("#calcs .pre").forEach(b => b.setAttribute("aria-pressed", parseFloat(cq(b.dataset.for).value) == parseFloat(b.dataset.v))); }
 function calcRun() {
   const c = CALCS.find(x => x.id == cur), v = {};
   c.f.forEach(f => { const el = cq("f_" + f[0]), t = f[3] || "num"; v[f[0]] = t == "num" ? parseFloat(el.value) : el.value; });
+  const sv = {}; c.f.forEach(f => { if (!(RMAP[c.id] || {})[f[0]] && !(NOSAVE[c.id] || []).includes(f[0])) sv[f[0]] = (f[3] || "num") == "num" ? (cq("f_" + f[0]).value) : v[f[0]]; }); PROJ.calcs[c.id] = sv; if (typeof projChanged == "function") projChanged();
   let r; try { r = c.run(v); } catch (e) { cq("cres").innerHTML = `<div class="rc mt-4">Check the inputs: ${esc(e.message)}</div>`; return; }
-  cq("cres").innerHTML = resultHtml(c, r, v);
+  cq("cres").innerHTML = resultHtml(c, r, v); if (typeof exportAction == "function") cq("cres").querySelectorAll("[data-exp]").forEach(b => b.onclick = () => exportAction(b.dataset.exp));
 }
 function resultHtml(c, r, v) {
   const h = r.head || [];
   let dg = ""; try { if (VIZ[c.id]) dg = VIZ[c.id](v); } catch (e) { dg = ""; }
-  return `<h3 class="font-bold text-lg mt-5 mb-2">${c.name} results</h3><div class="grid md:grid-cols-2 gap-4">
+  LASTRES = { c, r, v, dg };
+  const ex = typeof exportAction == "function" ? `<div class="flex flex-wrap gap-2 mb-3"><button class="btn alt" data-exp="copy">Copy results</button>${dg ? '<button class="btn alt" data-exp="png">Diagram PNG</button>' : ""}<button class="btn alt" data-exp="print">Print / save PDF</button></div>` : "";
+  return `<h3 class="font-bold text-lg mt-5 mb-2">${c.name} results</h3>${ex}<div class="grid md:grid-cols-2 gap-4">
     <div class="rc center"><div class="lbl">${esc(h[0] || "")}</div><div class="big">${esc(h[1] || "-")}${h[2] ? `<span class="unit">${esc(h[2])}</span>` : ""}</div><div class="lbl">${esc(h[3] || "")}</div></div>
     <div class="rc"><div class="lbl mb-2">Details</div>${(r.stats || []).map(s => `<p class="kv"><b>${esc(s[0])}:</b> ${esc(s[1])}</p>`).join("")}</div></div>
     ${dg ? `<div class="rc mt-4"><div class="lbl mb-2">Diagram</div>${dg}</div>` : ""}
@@ -173,6 +196,8 @@ function resultHtml(c, r, v) {
     ${r.ref ? `<div class="rc mt-4"><div class="lbl mb-2" style="color:var(--accent-text)"><b>${esc(r.ref.title)}</b></div><div class="refgrid">${r.ref.items.map(i => `<span>&bull; ${esc(i)}</span>`).join("")}</div></div>` : ""}`;
 }
 
+const plannedWrap = (i, key, what) => { const f0 = CALCS[i].run; CALCS[i].run = v => { const r = f0(v), n = +r.head[1], p = ROOM[key]; if (has(p) && r.stats) r.stats.push([`Planned ${what} in room design`, `${p} planned, ${n} needed - ${p >= n ? "OK" : "SHORT by " + (n - p)}`]); return r; }; };
+plannedWrap(3, "nm", "microphones"); plannedWrap(4, "ns", "speakers");
 // ---------- diagrams (inline SVG, theme-aware). Drawn from the same inputs as run(); not to scale for labels.
 const ST = { ink: "var(--ink)", mute: "var(--mute)", acc: "var(--accent-text)", line: "var(--line)" };
 const T = (x, y, t, o = {}) => `<text x="${x}" y="${y}" text-anchor="${o.a || "middle"}" style="font-size:${o.s || 12}px;fill:${o.c || ST.ink};${o.b ? "font-weight:700" : ""}">${esc(t)}</text>`;
@@ -201,7 +226,7 @@ const VIZ = {
   3: v => { const t = Math.tan(Math.min(v.h, 179.5) * DEG / 2), w = 2 * v.d * t, s = Math.min(460 / v.rw, 290 / v.rl), x0 = (520 - v.rw * s) / 2, y0 = 26, cx = 260, py = d => y0 + d * s, id = "cf" + (++_cid), tIn = v.tw / 2 <= v.td * t + 1e-9, tc = tIn ? "#16a34a" : "#dc2626", ext = v.rl * t * s;
     let b = `<clipPath id="${id}"><rect x="${x0}" y="${y0}" width="${v.rw * s}" height="${v.rl * s}"/></clipPath>` + `<path clip-path="url(#${id})" d="M${cx} ${y0} L${cx - ext} ${py(v.rl)} L${cx + ext} ${py(v.rl)} Z" style="fill:${ST.acc};fill-opacity:.12"/>`;
     b += RC(x0, y0, v.rw * s, v.rl * s, { c: ST.mute, w: 2 });
-    const tx = cx - v.tw * s / 2, ty = py(v.td), n = Math.floor(v.tl / v.p), sp = v.tl / Math.max(n, 1);
+    const tx = cx - v.tw * s / 2, ty = py(v.td), n = Math.max(0, Math.round(v.sn)), sp = v.tl / Math.max(n, 1);
     for (let i = 0; i < n; i++) { const yy = ty + (i + .5) * sp * s; b += RC(tx - 16, yy - 7, 12, 14, { r: 3, c: ST.mute, w: 1 }) + RC(tx + v.tw * s + 4, yy - 7, 12, 14, { r: 3, c: ST.mute, w: 1 }); }
     b += RC(tx, ty, v.tw * s, v.tl * s, { f: tc, op: .25, c: tc, w: 2, r: 4 });
     b += `<g clip-path="url(#${id})">` + LN(cx, y0, cx - ext, py(v.rl), { c: ST.acc, w: 2 }) + LN(cx, y0, cx + ext, py(v.rl), { c: ST.acc, w: 2 }) + `</g>`;
@@ -234,4 +259,20 @@ const VIZ = {
     let b = ""; [["Sabine", sab], ["Eyring", eyr]].forEach((p, i) => { b += RC(90, 20 + i * 40, p[1] * sc, 26, { f: p[1] <= v.tg ? "#16a34a" : "#dc2626", c: "none", w: 0, op: .85 }) + T(84, 38 + i * 40, p[0], { a: "end", s: 12 }) + T(96 + p[1] * sc, 38 + i * 40, `${R(p[1])} s`, { a: "start", b: 1, s: 12 }); });
     return SV(520, 110, b + LN(90 + v.tg * sc, 10, 90 + v.tg * sc, 92, { c: ST.ink, w: 2, d: "5 3" }) + T(90 + v.tg * sc, 106, `target ${R(v.tg)} s`, { b: 1, s: 11 })); }
 };
+
+VIZ[6] = v => { const c = 331.3 + 0.606 * v.T, tm = v.dm / c * 1000, tf = v.df / c * 1000, fill = Math.max(0, (v.dm - v.df) / c * 1000), dly = fill + v.hs, s = 430 / Math.max(v.dm, 1), x0 = 40, xl = x0 + v.dm * s, xf = xl - v.df * s, y = 62;
+  let b = LN(x0, y, xl, y, { c: ST.mute, w: 1, d: "3 3" }) + RC(x0 - 12, y - 12, 12, 24, { f: ST.ink, c: ST.ink, r: 2 }) + RC(xf - 6, y - 8, 12, 16, { f: ST.acc, c: ST.acc, r: 2 }) + `<circle cx="${xl}" cy="${y}" r="7" style="fill:#d97706"/>`;
+  b += LN(x0, y - 26, xl, y - 26, { c: ST.ink, w: 1.2 }) + T((x0 + xl) / 2, y - 32, `main to listener ${R(v.dm)} m`, { s: 11 }) + LN(xf, y + 26, xl, y + 26, { c: ST.acc, w: 1.2 }) + T((xf + xl) / 2, y + 42, `fill ${R(v.df)} m`, { s: 11, c: ST.acc }) + T(x0 - 6, y + 40, "main", { a: "start", s: 11, c: ST.mute }) + T(xl, y + 24, "", { s: 1 });
+  const sc = 330 / Math.max(tm + v.hs, 1), bx = 100, y1 = 130, y2 = 170;
+  b += T(bx - 8, y1 + 17, "Main", { a: "end", s: 12 }) + RC(bx, y1, tm * sc, 24, { f: ST.ink, c: "none", op: .55, w: 0 }) + T(bx + tm * sc + 6, y1 + 17, `${R(tm, 1)} ms`, { a: "start", b: 1, s: 12 });
+  b += T(bx - 8, y2 + 17, "Fill", { a: "end", s: 12 }) + RC(bx, y2, dly * sc, 24, { f: "#d97706", c: "none", op: .6, w: 0 }) + RC(bx + dly * sc, y2, tf * sc, 24, { f: ST.acc, c: "none", op: .6, w: 0 }) + T(bx + (dly + tf) * sc + 6, y2 + 17, `${R(dly + tf, 1)} ms`, { a: "start", b: 1, s: 12 });
+  b += T(bx, y2 + 44, `delay ${R(dly, 1)} ms (orange) + travel ${R(tf, 1)} ms (blue) = main + ${R(v.hs, 0)} ms Haas`, { a: "start", s: 11, c: ST.mute });
+  return SV(520, 240, b + T(bx, 112, "arrival time at the listener", { a: "start", s: 11, c: ST.mute })); };
+const lineViz = (title, cab, load, bars, foot) => { let b = RC(24, 24, 70, 44, { c: ST.ink, r: 6, f: ST.line, op: .5 }) + T(59, 51, title, { s: 12, b: 1 }) + LN(94, 46, 400, 46, { c: ST.acc, w: 3 }) + T(247, 36, cab, { s: 12, c: ST.acc, b: 1 }) + RC(400, 24, 96, 44, { c: ST.ink, r: 6, f: ST.line, op: .5 }) + T(448, 51, load, { s: 12, b: 1 });
+  bars.forEach((r, i) => { const y = 100 + i * 44; b += T(24, y + 15, r[0], { a: "start", s: 12 }) + RC(24 + 110, y, 360, 22, { c: ST.mute, w: 1 }) + RC(134, y, 360 * r[1], 22, { f: r[2], c: "none", w: 0, op: .85 }) + T(134 + 360 * Math.min(r[1], 1) - 4, y + 15, r[3], { a: "end", s: 11, c: "#fff", b: 1 }); });
+  return SV(520, 110 + bars.length * 44 + 24, b + T(24, 108 + bars.length * 44 + 12, foot, { a: "start", s: 11, c: ST.mute })); };
+VIZ[18] = v => { const i = v.w / 100, r = OHM[v.mm] * 2 * v.len / 1000, dv = i * r, db = 20 * L10((100 - dv) / 100), ok = Math.abs(db) <= v.max;
+  return lineViz("Amp 100 V", `${R(v.len, 0)} m of ${v.mm} mm²`, `${R(v.w, 0)} W load`, [["Voltage delivered", Math.max(0, (100 - dv) / 100), ok ? "#16a34a" : "#dc2626", `${R(100 - dv, 1)} V of 100 V`], ["Loss vs limit", Math.min(1, Math.abs(db) / Math.max(v.max, 0.01)), ok ? "#16a34a" : "#dc2626", `${R(db)} dB of ${R(v.max)} dB allowed`]], `current ${R(i)} A, cable drops ${R(dv)} V and wastes ${R(i * i * r, 1)} W`); };
+VIZ[19] = v => { const rc = OHM[v.mm] * 2 * v.len / 1000, db = 20 * L10(v.z / (v.z + rc)), lost = rc / (v.z + rc), df = v.z / rc;
+  return lineViz("Amplifier", `${R(v.len, 0)} m of ${v.mm} mm²`, `${R(v.z, 0)} ohm speaker`, [["Power reaching speaker", 1 - lost, db > -0.5 ? "#16a34a" : "#dc2626", `${R((1 - lost) * 100, 1)}%`], ["Loss vs 0.5 dB target", Math.min(1, Math.abs(db) / 0.5), db > -0.5 ? "#16a34a" : "#dc2626", `${R(db)} dB`]], `loop resistance ${R(rc, 3)} ohm, damping factor ${R(df, 0)}`); };
 showList();

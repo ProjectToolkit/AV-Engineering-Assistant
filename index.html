@@ -28,40 +28,51 @@ body input[type=file]{background:none;border:0;padding:0}
 .bar{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;width:min(72rem,calc(100% - 2rem));background:var(--card);border-radius:12px;padding:10px 16px;display:flex;align-items:center;gap:14px;box-shadow:0 6px 24px var(--shadow)}
 .track{height:6px;background:var(--line);border-radius:9px;margin-top:4px}.track i{display:block;height:100%;width:0;background:var(--accent);border-radius:9px;transition:width .3s}
 .chip{font-size:12px;padding:4px 10px;border-radius:99px;border:1px solid var(--line);background:var(--card);color:var(--ink)}.chip[aria-pressed=true]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}.chip:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
-body #calcs input,body #calcs select,body #calcs textarea{display:block;margin-top:4px;background:var(--card)}
-#calcs .grp{font-size:13px;font-weight:700;color:var(--mute);margin:14px 0 8px;text-transform:uppercase;letter-spacing:.04em}
-#calcs .tile{display:flex;gap:12px;align-items:flex-start;text-align:left;padding:14px;border-radius:12px;background:var(--fill);border:1px solid var(--line);color:var(--ink);font-size:14px;transition:border-color .15s,transform .15s}
-#calcs .tile:hover{border-color:var(--accent);transform:translateY(-1px)}#calcs .tile:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
-#calcs .tile .num{flex:none;width:28px;height:28px;border-radius:8px;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center;font-weight:700;font-size:13px}
-#calcs .tile .sub{font-size:12px;color:var(--mute)}
-#calcs .rc{background:var(--fill);border:1px solid var(--line);border-radius:12px;padding:16px}
-#calcs .rc.center{text-align:center;display:flex;flex-direction:column;justify-content:center;gap:6px;min-height:150px;background:var(--outbg)}
-#calcs .lbl{font-size:12px;color:var(--mute)}.rc.center .lbl{color:var(--outfg)}
-#calcs .big{font-size:44px;font-weight:700;line-height:1.1;color:var(--outfg)}#calcs .unit{font-size:20px;margin-left:6px;font-weight:600}
-#calcs .kv{font-size:14px;margin:5px 0}#calcs .note{font-size:13px;color:var(--mute);margin:3px 0}
-#calcs .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;white-space:pre-wrap;color:var(--ink);margin:0}
-#calcs .hint{display:block;font-size:11px;color:var(--mute);margin-top:3px}
-#calcs .pres{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
-#calcs .pre{font-size:12px;padding:4px 10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink)}#calcs .pre[aria-pressed=true]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
-#calcs .calcbtn{display:block;width:100%;margin-top:16px;padding:12px;background:var(--accent);color:var(--accent-fg);font-weight:700;border-radius:10px;border:0;text-align:center}
-#calcs .refgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px 14px;font-size:13px}
+body #calcs input,body #calcs select,body #calcs textarea,body #t5 input,body #t5 select{display:block;margin-top:4px;background:var(--card)}
+.grp{font-size:13px;font-weight:700;color:var(--mute);margin:14px 0 8px;text-transform:uppercase;letter-spacing:.04em}
+.tile{display:flex;gap:12px;align-items:flex-start;text-align:left;padding:14px;border-radius:12px;background:var(--fill);border:1px solid var(--line);color:var(--ink);font-size:14px;transition:border-color .15s,transform .15s}
+.tile:hover{border-color:var(--accent);transform:translateY(-1px)}.tile:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
+.tile .num{flex:none;width:28px;height:28px;border-radius:8px;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center;font-weight:700;font-size:13px}
+.tile .sub{font-size:12px;color:var(--mute)}
+.rc{background:var(--fill);border:1px solid var(--line);border-radius:12px;padding:16px}
+.rc.center{text-align:center;display:flex;flex-direction:column;justify-content:center;gap:6px;min-height:150px;background:var(--outbg)}
+.lbl{font-size:12px;color:var(--mute)}.rc.center .lbl{color:var(--outfg)}
+.big{font-size:44px;font-weight:700;line-height:1.1;color:var(--outfg)}.unit{font-size:20px;margin-left:6px;font-weight:600}
+.kv{font-size:14px;margin:5px 0}.note{font-size:13px;color:var(--mute);margin:3px 0}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;white-space:pre-wrap;color:var(--ink);margin:0}
+.hint{display:block;font-size:11px;color:var(--mute);margin-top:3px}
+.pres{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.pre{font-size:12px;padding:4px 10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink)}.pre[aria-pressed=true]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.calcbtn{display:block;width:100%;margin-top:16px;padding:12px;background:var(--accent);color:var(--accent-fg);font-weight:700;border-radius:10px;border:0;text-align:center}
+.refgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px 14px;font-size:13px}
 @media(prefers-reduced-motion:reduce){.track i{transition:none}}@media(max-width:640px){.tabs{flex-wrap:wrap}.hero svg{display:none}}
+.roomtag{font-size:10px;padding:0 6px;border-radius:99px;background:var(--accent);color:var(--accent-fg);margin-left:4px;vertical-align:1px}
+.paper{background:#fff;color:#1a2547;font:14px/1.45 "DM Sans","Segoe UI",Arial,sans-serif;padding:22px;border-radius:12px}
+@media print{#ver{display:none}}
 </style></head>
 <body class="max-w-6xl mx-auto p-4">
 <header class="hero"><button id="theme" class="badge" style="position:absolute;right:16px;top:14px;z-index:2;color:#fff;cursor:pointer" aria-label="Switch colour theme"></button><span class="badge"><i></i>Audio Visual</span><h1 class="text-3xl font-bold mt-2 mb-1">AV Engineering Assistant</h1>
 <p>Audit schedules, run the numbers, and export to Visio. Everything runs in your browser.</p>
 <svg width="280" height="90" viewBox="0 0 280 90" fill="none" stroke="#7aa7ff" stroke-width="1.2" aria-hidden="true"><path d="M0 45Q18 0 36 45T72 45T108 45T144 45T180 45T216 45T252 45T288 45"/><path d="M0 45Q18 85 36 45T72 45T108 45T144 45T180 45T216 45T252 45T288 45" opacity=".6"/><path d="M0 45Q25 15 50 45T100 45T150 45T200 45T250 45" opacity=".4"/></svg></header>
-<nav class="tabs" role="tablist"><button class="tab" role="tab" data-t="t1" aria-selected="true">BOM &amp; cable audit</button><button class="tab" role="tab" data-t="t2" aria-selected="false">Calculators</button><button class="tab" role="tab" data-t="t3" aria-selected="false">Visio export</button><button class="tab" role="tab" data-t="t4" aria-selected="false">Manuals &amp; Claude</button></nav>
+<nav class="tabs" role="tablist"><button class="tab" role="tab" data-t="t1" aria-selected="true">BOM &amp; cable audit</button><button class="tab" role="tab" data-t="t5" aria-selected="false">Project &amp; Room</button><button class="tab" role="tab" data-t="t2" aria-selected="false">Calculators</button><button class="tab" role="tab" data-t="t3" aria-selected="false">Visio export</button><button class="tab" role="tab" data-t="t4" aria-selected="false">Manuals &amp; Claude</button></nav>
 <section id="t1" class="card" style="--c:#2563eb"><h2><span>1</span>BOM &amp; cable audit</h2>
 <div id="drop">Drop the equipment schedule and cable pull sheet here (.xlsx or .csv, one workbook or two files)<br><input id="files" type="file" multiple accept=".xlsx,.xlsm,.xls,.csv" class="mt-2"></div>
 <p id="roomrow" hidden class="my-3 text-sm">Estimate room / scenario: <select id="room"></select></p>
 <p class="my-3"><button class="btn alt" id="tpl">Download sample BOM &amp; cable template</button></p><div id="audit"></div></section>
-<section id="t2" class="card" hidden style="--c:#d97706"><h2><span>2</span>Calculators</h2><div id="calcs"></div></section>
-<section id="t3" class="card" hidden style="--c:#15803d"><h2><span>3</span>Visio export</h2><p class="mb-3 text-sm" style="color:var(--mute)">Uses the BOM loaded on the audit tab. Rack is 42U with heavy gear at the bottom and a 1RU gap after each group.</p><button class="b" id="vx">Download Visio Data Visualizer .xlsx</button> <button class="btn alt" id="vb">Download rack elevation .bas</button><pre id="vmsg" class="mt-3 text-sm"></pre></section>
-<section id="t4" class="card" hidden style="--c:#dc2626"><h2><span>4</span>Manuals &amp; Claude</h2><p class="mb-3 text-sm" style="color:var(--mute)">Manuals are read in your browser. The API key stays in this browser's localStorage and goes only to api.anthropic.com.</p>
+<section id="t5" class="card" hidden style="--c:#7c3aed"><h2><span>2</span>Project &amp; Room</h2>
+<div class="flex flex-wrap gap-2 items-end mb-3"><label class="text-xs" style="color:var(--mute)">Job No:<br><input id="pname" type="text" size="34" placeholder="e.g. 12792"></label>
+<button class="btn alt" id="psave">Save project (.json)</button><button class="btn alt" id="ppdf">Save project as PDF</button><label class="btn alt" style="cursor:pointer">Load project<input id="pload" type="file" accept=".json,application/json" hidden></label><button class="btn alt" id="pnew">New project</button></div>
+<p class="text-sm mb-3" style="color:var(--mute)">Enter the room once. The display, camera, microphone, speaker and acoustics calculators fill themselves from it. Saved files also include the loaded BOM and pull sheet.</p>
+<div id="proomform" class="grid sm:grid-cols-3 gap-x-4 gap-y-3"></div>
+<div class="rc mt-4"><div class="lbl mb-2">Room plan (updates as you type)</div><div id="pplan"></div></div>
+<div class="flex flex-wrap gap-2 mt-4"><button class="b" id="pchk">Run design check</button><button class="b" id="psumb">Room summary</button></div><div id="pout" class="mt-4"></div></section>
+<section id="t2" class="card" hidden style="--c:#d97706"><h2><span>3</span>Calculators</h2><div id="calcs"></div></section>
+<section id="t3" class="card" hidden style="--c:#15803d"><h2><span>4</span>Visio export</h2><p class="mb-3 text-sm" style="color:var(--mute)">Uses the BOM loaded on the audit tab. Rack is 42U with heavy gear at the bottom and a 1RU gap after each group.</p><button class="b" id="vx">Download Visio Data Visualizer .xlsx</button> <button class="btn alt" id="vb">Download rack elevation .bas</button><pre id="vmsg" class="mt-3 text-sm"></pre></section>
+<section id="t4" class="card" hidden style="--c:#dc2626"><h2><span>5</span>Manuals &amp; Claude</h2><p class="mb-3 text-sm" style="color:var(--mute)">Manuals are read in your browser. The API key stays in this browser's localStorage and goes only to api.anthropic.com.</p>
 <p class="mb-3"><input id="pdfs" type="file" multiple accept=".pdf"> <button class="btn alt" id="srv">Load ./manuals/index.json</button> <span id="pmsg" class="text-sm"></span></p>
 <p class="mb-3"><label class="text-xs" style="color:var(--mute)">API key</label><br><input id="key" type="password" size="44" placeholder="sk-ant-..."></p>
 <textarea id="q" rows="2" class="w-full" placeholder="e.g. RS-232 pinout for the DMP 128 Plus"></textarea><p class="my-2"><button class="b" id="ask">Ask</button></p><div id="ans" class="p-3 whitespace-pre-wrap"></div></section>
+<p id="ver" class="text-xs text-center" style="color:var(--mute);padding:20px 0 90px"></p>
 <footer class="bar"><div class="flex-1"><div class="text-xs" style="color:var(--mute)" id="loaded">0 devices, 0 cables loaded</div><div class="track"><i id="prog"></i></div></div>
 <button class="btn alt" id="clr">Clear data</button><button class="b" id="rerun">Run audit</button></footer>
-<script src="brands.js"></script><script src="app.js"></script><script src="calcs.js" onerror="document.getElementById('calcs').innerHTML='<p class=&quot;p-3 rounded&quot; style=&quot;background:var(--s-crit)&quot;>calcs.js was not found next to index.html. Copy calcs.js into the same folder on the NAS, then reload with Ctrl+F5.</p>'"></script><script>(function(){var b=document.getElementById("theme"),r=document.documentElement;function s(){b.textContent=r.dataset.theme=="dark"?"Light theme":"Dark theme"}s();b.onclick=function(){r.dataset.theme=r.dataset.theme=="dark"?"light":"dark";try{localStorage.setItem("av_theme",r.dataset.theme)}catch(e){}s()}})()</script></body></html>
+<script src="brands.js"></script><script src="app.js"></script><script src="calcs.js" onerror="document.getElementById('calcs').innerHTML='<p class=&quot;p-3 rounded&quot; style=&quot;background:var(--s-crit)&quot;>calcs.js was not found next to index.html. Copy calcs.js into the same folder on the NAS, then reload with Ctrl+F5.</p>'"></script><script src="project.js"></script><script>(function(){var b=document.getElementById("theme"),r=document.documentElement;function s(){b.textContent=r.dataset.theme=="dark"?"Light theme":"Dark theme"}s();b.onclick=function(){r.dataset.theme=r.dataset.theme=="dark"?"light":"dark";try{localStorage.setItem("av_theme",r.dataset.theme)}catch(e){}s()}})()</script></body></html>

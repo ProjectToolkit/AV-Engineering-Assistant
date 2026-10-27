@@ -154,7 +154,7 @@ const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
 function showList() {
   cur = null;
   const grp = (g, t) => `<h3 class="grp">${t}</h3><div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">${CALCS.filter(c => c.group == g).map(c => `<button class="tile" data-id="${c.id}"><span class="num">${c.id}</span><span><b>${c.name}</b><br><span class="sub">${c.about}</span></span></button>`).join("")}</div>`;
-  cq("calcs").innerHTML = grp("core", "Everyday AV design, in priority order") + grp("pa", "Stadium and PA");
+  cq("calcs").innerHTML = grp("core", "Everyday AV design, in priority order") + grp("more", "Planning &amp; infrastructure") + grp("pa", "Stadium and PA");
   cq("calcs").querySelectorAll(".tile").forEach(b => b.onclick = () => openCalc(+b.dataset.id));
 }
 function openCalc(id) {
@@ -162,7 +162,7 @@ function openCalc(id) {
   const rmap = RMAP[id] || {};
   const field = f => { const t = f[3] || "num", o = f[5] || {}, base = `data-k="${f[0]}" id="f_${f[0]}"`, def = fieldDefault(c, f), fromRoom = !!rmap[f[0]], nd = parseFloat(def);
     const inp = t == "sel" ? `<select ${base} class="w-full">${f[4].map(op => { const lab = op.includes("|") ? op.split("|")[1] : op, val = op.split("|")[0]; return `<option value="${esc(val)}" ${val == String(def) ? "selected" : ""}>${esc(lab)}</option>`; }).join("")}</select>`
-      : t == "area" ? `<textarea ${base} rows="6" class="w-full">${esc(def)}</textarea>` : `<input ${base} type="number" step="any" value="${has(nd) ? nd : ""}" class="w-full">`;
+      : t == "area" ? `<textarea ${base} rows="6" class="w-full">${esc(def)}</textarea>` : t == "txt" ? `<input ${base} type="text" value="${esc(def)}" class="w-full">` : `<input ${base} type="number" step="any" value="${has(nd) ? nd : ""}" class="w-full">`;
     return `<label class="block text-xs" style="color:var(--mute);${t == "area" || o.p ? "grid-column:1/-1" : ""}">${f[1]}${fromRoom ? ' <span class="roomtag">room</span>' : ""}${inp}${o.h ? `<span class="hint">${o.h}</span>` : ""}${o.p ? `<span class="pres">${o.p.map(p => `<button type="button" class="pre" data-for="f_${f[0]}" data-v="${p[1]}">${p[0]}</button>`).join("")}</span>` : ""}</label>`; };
   cq("calcs").innerHTML = `<button class="btn alt mb-3" id="back">&larr; All calculators</button><div class="rc"><h3 class="font-bold mb-1 text-lg">${c.id}. ${c.name}</h3>${Object.keys(rmap).length ? `<p class="text-xs mb-3" style="color:var(--mute)">Fields tagged <span class="roomtag">room</span> are filled from the room design${PROJ.name ? ` "${esc(PROJ.name)}"` : ""}. <a href="#" id="editroom" style="color:var(--accent-text);text-decoration:underline">Edit room</a></p>` : "<div class=\"mb-2\"></div>"}<div class="grid sm:grid-cols-2 gap-x-4 gap-y-3">${c.f.map(field).join("")}</div><button class="btn calcbtn" id="go">Calculate</button></div><div id="cres"></div>`;
   cq("back").onclick = showList; let done = false;
@@ -276,4 +276,141 @@ VIZ[18] = v => { const i = v.w / 100, r = OHM[v.mm] * 2 * v.len / 1000, dv = i *
   return lineViz("Amp 100 V", `${R(v.len, 0)} m of ${v.mm} mm²`, `${R(v.w, 0)} W load`, [["Voltage delivered", Math.max(0, (100 - dv) / 100), ok ? "#16a34a" : "#dc2626", `${R(100 - dv, 1)} V of 100 V`], ["Loss vs limit", Math.min(1, Math.abs(db) / Math.max(v.max, 0.01)), ok ? "#16a34a" : "#dc2626", `${R(db)} dB of ${R(v.max)} dB allowed`]], `current ${R(i)} A, cable drops ${R(dv)} V and wastes ${R(i * i * r, 1)} W`); };
 VIZ[19] = v => { const rc = OHM[v.mm] * 2 * v.len / 1000, db = 20 * L10(v.z / (v.z + rc)), lost = rc / (v.z + rc), df = v.z / rc;
   return lineViz("Amplifier", `${R(v.len, 0)} m of ${v.mm} mm²`, `${R(v.z, 0)} ohm speaker`, [["Power reaching speaker", 1 - lost, db > -0.5 ? "#16a34a" : "#dc2626", `${R((1 - lost) * 100, 1)}%`], ["Loss vs 0.5 dB target", Math.min(1, Math.abs(db) / 0.5), db > -0.5 ? "#16a34a" : "#dc2626", `${R(db)} dB`]], `loop resistance ${R(rc, 3)} ohm, damping factor ${R(df, 0)}`); };
+// ---------- planning & infrastructure calculators (20-26)
+const PAL = ["#2563eb", "#7c3aed", "#d97706", "#15803d", "#dc2626", "#0e7490", "#db2777", "#65a30d"];
+const hbars = (rows, foot) => { let b = ""; rows.forEach((r, i) => { const y = 14 + i * 34; b += T(8, y + 15, r[0], { a: "start", s: 12 }) + RC(150, y, 270, 22, { c: ST.mute, w: 1 }) + RC(150, y, 270 * Math.min(1, Math.max(0, r[1])), 22, { f: r[2], c: "none", w: 0, op: .85 }) + T(428, y + 15, r[3], { a: "start", s: 11, c: ST.ink, b: 1 }); });
+  return SV(520, 24 + rows.length * 34 + 22, b + T(8, 24 + rows.length * 34 + 12, foot, { a: "start", s: 11, c: ST.mute })); };
+
+// 20 conduit fill
+const CONDUIT = [["20", 16.9], ["25", 21.8], ["32", 28.6], ["40", 36.4], ["50", 45.8], ["63", 57.2], ["75", 70.2], ["100", 94.6]];
+function conduitCalc(v) {
+  const cab = lines(v.cb).map(l => { const p = l.split(",").map(s => s.trim()); return { n: p[0], od: +p[1] || 0, q: +p[2] || 0 }; });
+  const area = cab.reduce((a, c) => a + Math.PI / 4 * c.od * c.od * c.q, 0), n = cab.reduce((a, c) => a + c.q, 0), a2 = area * (1 + v.sp / 100);
+  const rows = CONDUIT.map(c => ({ n: c[0], id: c[1], fill: a2 / (Math.PI / 4 * c[1] * c[1]) * 100 }));
+  return { cab, area, n, a2, rows, pick: rows.find(r => r.fill <= v.lim + 1e-9) };
+}
+CALCS.push({ id: 20, name: "Conduit fill", group: "more", about: "Conduit size for a bundle of AV and data cables",
+  f: [["cb", "Cables: name, outside diameter (mm), count (one per line)", "Cat6A, 7.2, 12\nSpeaker 2-core 2.5 mm2, 7.0, 4\nHDMI / AVoIP fibre, 4.5, 2", "area"],
+    ["lim", "Fill limit (%)", 40, "num", null, { h: "Planning limit for the share of the conduit cross-section the cables may fill.", p: [["1 cable: 53%", 53], ["2 cables: 31%", 31], ["3+ cables: 40%", 40]] }], ["sp", "Spare capacity for future cables (%)", 25]],
+  run: v => { const c = conduitCalc(v), need = c.a2 / (v.lim / 100), mid = Math.sqrt(4 * need / Math.PI);
+    return { head: ["Smallest conduit", c.pick ? c.pick.n + " mm" : "Over 100 mm", "", c.pick ? `${R(c.pick.fill, 0)}% fill including ${v.sp}% spare (limit ${v.lim}%)` : "split the run or use cable tray"],
+      stats: [["Cables", String(c.n)], ["Cable cross-section", `${R(c.area, 0)} mm2`], ["With spare capacity", `${R(c.a2, 0)} mm2`], ["Conduit area needed at the limit", `${R(need, 0)} mm2`], ["Minimum internal diameter", `${R(mid, 1)} mm`]],
+      steps: c.cab.map(x => `${x.n}: pi/4 x ${x.od}^2 x ${x.q} = ${R(Math.PI / 4 * x.od * x.od * x.q, 0)} mm2`).concat([`Total = ${R(c.area, 0)} mm2; with ${v.sp}% spare = ${R(c.a2, 0)} mm2`, `Conduit area = ${R(c.a2, 0)} / ${v.lim / 100} = ${R(need, 0)} mm2`]),
+      notes: ["Internal diameters are approximate for medium-duty rigid conduit. Confirm against the product datasheet.", "Check bend radius, the number of bends and pull-tension limits for long runs. Keep data and power cables in separate conduits or segregated.", "A fill limit of 40% is a common planning figure. Follow the rule that applies to your site and cable type."] }; } });
+VIZ[20] = v => { const c = conduitCalc(v); return hbars(c.rows.map(r => [`${r.n} mm (ID ${R(r.id, 1)})`, r.fill / 100, r.fill <= v.lim ? "#16a34a" : "#dc2626", `${R(r.fill, 0)}%`]), `fill with ${R(c.n, 0)} cables incl. ${v.sp}% spare. Green is within the ${v.lim}% limit.`); };
+
+// 21 rack heat load and cooling
+function heatCalc(v) {
+  const it = lines(v.eq).map(l => { const p = l.split(",").map(s => s.trim()), w = +p[1] || 0, hp = p[2] === undefined || p[2] === "" ? 100 : +p[2]; return { n: p[0], w, hp, h: w * hp / 100 }; });
+  const W = it.reduce((a, x) => a + x.h, 0), Wm = W * (1 + v.mg / 100), dT = Math.max(v.dt, 0.1), m3h = 3600 * Wm / (1.2 * 1005 * dT), btu = Wm * 3.412;
+  return { it, W, Wm, dT, m3h, cfm: m3h * 0.5886, btu, tons: btu / 12000 };
+}
+CALCS.push({ id: 21, name: "Rack heat load & cooling", group: "more", about: "Heat output, cooling and airflow for an AV rack or equipment room",
+  f: [["eq", "Equipment: name, rated watts, % released as heat (one per line)", "UPS, 300, 10\nAmplifier 4ch, 800, 30\nDSP, 60, 100\nNetwork switch, 150, 100\nControl processor, 40, 100", "area"],
+    ["dt", "Allowed air temperature rise (C)", 10, "num", null, { h: "Difference between supply and exhaust air. 8 to 12 C is typical." }], ["mg", "Design margin (%)", 20]],
+  run: v => { const c = heatCalc(v);
+    return { head: ["Cooling load", R(c.Wm / 1000, 2), "kW", `${R(c.btu, 0)} BTU/h, ${R(c.tons, 2)} tons (with ${v.mg}% margin)`],
+      stats: [["Heat from equipment", `${R(c.W, 0)} W`], ["With design margin", `${R(c.Wm, 0)} W`], ["Airflow needed", `${R(c.m3h, 0)} m3/h (${R(c.cfm, 0)} CFM) at ${v.dt} C rise`], ["Equipment count", String(c.it.length)]],
+      steps: c.it.map(x => `${x.n}: ${x.w} W x ${x.hp}% = ${R(x.h, 0)} W heat`).concat([`Total = ${R(c.W, 0)} W; with margin = ${R(c.Wm, 0)} W`, "BTU/h = W x 3.412", `Airflow m3/h = 3600 x W / (1.2 x 1005 x dT) = ${R(c.m3h, 0)}`]),
+      notes: ["The heat percentage is the share of rated watts released as heat. Amplifiers vary a lot with program level, so use the manufacturer's heat figure where you have it.", "Add heat from lighting and people if you are sizing the whole equipment room."] }; } });
+VIZ[21] = v => { const c = heatCalc(v), mx = Math.max(...c.it.map(x => x.h), 1); return hbars(c.it.slice(0, 10).map((x, i) => [x.n, x.h / mx, PAL[i % PAL.length], `${R(x.h, 0)} W`]), `total ${R(c.W, 0)} W of heat, ${R(c.Wm / 1000, 2)} kW with margin`); };
+
+// 22 IP address table
+const ipInt = s => { const p = String(s).trim().split("."); if (p.length != 4 || p.some(x => !/^\d+$/.test(x) || +x > 255)) return NaN; return ((+p[0] * 256 + +p[1]) * 256 + +p[2]) * 256 + +p[3]; };
+const intIp = n => [Math.floor(n / 16777216) % 256, Math.floor(n / 65536) % 256, Math.floor(n / 256) % 256, n % 256].join(".");
+function ipCalc(v) {
+  const base = ipInt(v.net), pf = Math.min(30, Math.max(8, Math.round(v.pf))); if (!has(base)) return null;
+  const size = 2 ** (32 - pf), net = Math.floor(base / size) * size, bc = net + size - 1, first = net + 1, last = bc - 1;
+  let lo = first, hi = last, gw = null; if (v.gw == "first") { gw = first; lo = first + 1; } else if (v.gw == "last") { gw = last; hi = last - 1; }
+  let p = lo; const groups = [], tbl = [];
+  lines(v.dev).forEach(l => { const q = l.split(","), nm = q[0].trim(), n = Math.max(0, Math.round(+q[1]) || 0); if (!nm || !n) return;
+    if (v.blk == "10") p += (10 - p % 256 % 10) % 10;
+    groups.push({ nm, n, start: p }); for (let i = 0; i < n; i++) tbl.push([intIp(p + i), `${nm} ${String(i + 1).padStart(2, "0")}`, p + i > hi]); p += n; });
+  const used = tbl.length, need = groups.reduce((a, g) => a + g.n, 0), spare = hi - p + 1, usable = last - first + 1;
+  return { net, pf, bc, first, last, gw, groups, tbl, used, need, spare, usable, mask: intIp(4294967296 - size), over: tbl.some(r => r[2]) };
+}
+CALCS.push({ id: 22, name: "IP address table", group: "more", about: "Plan IP addresses for Dante, AVoIP, control and displays",
+  f: [["net", "Network address", "10.10.20.0", "txt"], ["pf", "Prefix length (/n)", 24], ["gw", "Gateway", "first", "sel", ["first|First usable address", "last|Last usable address", "none|No gateway"]],
+    ["blk", "Layout", "10", "sel", ["pack|Pack addresses back to back", "10|Start each group on the next multiple of 10"]], ["dev", "Device groups: name, count (one per line)", "Dante devices, 8\nAVoIP encoders, 4\nAVoIP decoders, 4\nCameras, 2\nControl processor, 1\nDisplays, 6", "area"]],
+  run: v => { const c = ipCalc(v); if (!c) return { head: ["Check the network address", "-", "", "use an IPv4 address such as 10.10.20.0"], stats: [], steps: [], notes: ["Enter the network address in the form 10.10.20.0"] };
+    const sh = c.tbl.slice(0, 300).map(r => `${r[0].padEnd(16)}${r[1]}${r[2] ? "   OUT OF RANGE" : ""}`);
+    return { head: ["Addresses used", String(c.used), "", c.over ? "OVER: the subnet is too small" : `${c.spare} spare of ${c.usable} usable`],
+      stats: [["Network", `${intIp(c.net)} /${c.pf} (mask ${c.mask})`], ["Usable range", `${intIp(c.first)} to ${intIp(c.last)}`], ["Broadcast", intIp(c.bc)], ["Gateway", c.gw == null ? "none" : intIp(c.gw)], ["Groups", String(c.groups.length)]],
+      steps: ["Address".padEnd(16) + "Device"].concat(sh, c.tbl.length > 300 ? [`... ${c.tbl.length - 300} more`] : []),
+      notes: ["Use Copy results to paste the table into your schedule. Keep Dante, AVoIP and control traffic on separate VLANs where you can.", "Leave room for DHCP and for devices that are added later."] }; } });
+VIZ[22] = v => { const c = ipCalc(v); if (!c) return ""; const W = 480, sc = W / Math.max(c.usable, 1), segs = [];
+  if (c.gw != null) segs.push(["Gateway", 1, "#64748b"]); c.groups.forEach((g, i) => segs.push([g.nm, g.n, PAL[i % PAL.length]]));
+  let b = barRow(20, 24, W, segs, sc, 30), y = 80; segs.forEach(s => { b += RC(20, y - 10, 12, 12, { f: s[2], c: "none", w: 0 }) + T(40, y, `${s[0]}: ${s[1]}`, { a: "start", s: 12 }); y += 20; });
+  return SV(520, y + 16, b + T(20, y + 6, `usable range ${intIp(c.first)} to ${intIp(c.last)}; blank space is spare`, { a: "start", s: 11, c: ST.mute })); };
+
+// 23 display and projector brightness
+function brightCalc(v) {
+  const lr = v.lux * v.rho / 100 / Math.PI, L = (v.cr - 1) * lr * (1 + v.mg / 100), h = v.sw / aspect(v.ar), A = v.sw * h, lm = L * Math.PI * A / Math.max(v.gain, 0.1);
+  return { lr, L, h, A, lm, pn: [250, 350, 500, 700, 1000, 1500, 2500].find(x => x >= L), pl: [2000, 3000, 4000, 5000, 6000, 7000, 8000, 10000, 12000, 15000, 20000].find(x => x >= lm) };
+}
+CALCS.push({ id: 23, name: "Display & projector brightness", group: "more", about: "Brightness needed to hold contrast under room lighting",
+  f: [["m", "Type", "panel", "sel", ["panel|Flat panel or LED", "proj|Projector and screen"]], ["lux", "Ambient light on the screen (lux)", 300, "num", null, { h: "Measure at the screen face if you can.", p: [["Dim 100", 100], ["Office 300", 300], ["Bright 500", 500], ["Daylight 1000", 1000]] }],
+    ["rho", "Screen reflectance to room light (%)", 4, "num", null, { h: "Flat panel about 2 to 5%. Projection screen about 80 to 100% for a white screen, lower for an ambient light rejecting screen.", p: [["Panel 4%", 4], ["White screen 90%", 90], ["ALR screen 30%", 30]] }],
+    ["cr", "Target contrast ratio (white : lit black)", 50, "num", null, { h: "Projector: 10 to 15. Flat panel: 30 to 100, because a panel reflects far less room light.", p: [["Projector 10:1", 10], ["Projector 15:1", 15], ["Panel 50:1", 50], ["Panel 100:1", 100]] }], ["mg", "Ageing margin (%)", 20], ["sw", "Screen width (m, projector)", 2.4], ["ar", "Aspect ratio", "16:9", "sel", ARS], ["gain", "Screen gain (projector)", 1.0]],
+  run: v => { const c = brightCalc(v), pj = v.m == "proj";
+    return { head: pj ? ["Projector brightness needed", R(c.lm, 0), "lumens", c.pl ? `nearest standard: ${c.pl} lm` : "above 20000 lm - use more projectors"] : ["Display brightness needed", R(c.L, 0), "nits", c.pn ? `nearest standard panel: ${c.pn} nits` : "above 2500 nits - reduce room light"],
+      stats: [["Ambient light reflected by the screen", `${R(c.lr, 1)} nits`], ["White level needed", `${R(c.L, 0)} nits incl. ${v.mg}% margin`], ["Screen size", `${R(v.sw, 2)} m x ${R(c.h, 2)} m (${R(c.A, 2)} m2)`], ["Projector light needed", `${R(c.lm, 0)} lumens at gain ${v.gain}`]],
+      steps: ["Reflected luminance = lux x reflectance / pi", `= ${v.lux} x ${v.rho / 100} / pi = ${R(c.lr, 2)} nits`, "White level = (contrast - 1) x reflected x margin", `= (${v.cr} - 1) x ${R(c.lr, 2)} x ${1 + v.mg / 100} = ${R(c.L, 0)} nits`, "Lumens = nits x pi x area / gain", `= ${R(c.L, 0)} x pi x ${R(c.A, 2)} / ${v.gain} = ${R(c.lm, 0)} lm`],
+      notes: ["A planning model for ambient light only. Use ANSI lumens from the datasheet, and allow for lens and colour mode losses.", "Contrast ratio is white level against the black level lifted by room light."] }; } });
+VIZ[23] = v => { const c = brightCalc(v), pj = v.m == "proj", need = pj ? c.lm : c.L, std = pj ? [3000, 5000, 7000, 10000] : [350, 500, 700, 1000], u = pj ? "lm" : "nits", mx = Math.max(need, ...std) * 1.1;
+  return hbars([["Needed", need / mx, "#d97706", `${R(need, 0)} ${u}`]].concat(std.map(s => [`Typical ${s}`, s / mx, s >= need ? "#16a34a" : "#dc2626", s >= need ? "enough" : "too dim"])), `ambient ${v.lux} lux, target contrast ${v.cr}:1. Green meets the target.`); };
+RMAP[23] = { ar: "ar" };
+
+// 24 camera distance (DORI)
+const DORI = [["Detection", 25], ["Observation", 62.5], ["Recognition", 125], ["Identification", 250]];
+CALCS.push({ id: 24, name: "Camera distance (DORI)", group: "more", about: "How far a camera can see for detection through identification",
+  f: [["hres", "Horizontal resolution (pixels)", 3840, "sel", ["1280|1280 (720p)", "1920|1920 (1080p)", "2560|2560 (4 MP)", "3840|3840 (4K)"]], ["h", "Horizontal field of view (deg)", 90], ["cu", "Custom target density (px/m, optional)", NaN]],
+  run: v => { const t = Math.tan(Math.min(v.h, 179.5) * DEG / 2), hr = +v.hres, dist = p => hr / (p * 2 * t), cu = has(v.cu) && v.cu > 0 ? v.cu : null;
+    return { head: ["Identification distance", R(dist(250), 1), "m", `250 px/m, ${R(2 * dist(250) * t, 1)} m wide scene`],
+      stats: DORI.map(d => [`${d[0]} (${d[1]} px/m)`, `${R(dist(d[1]), 1)} m, ${R(hr / d[1], 1)} m scene width`]).concat(cu ? [[`Custom (${cu} px/m)`, `${R(dist(cu), 1)} m`]] : []),
+      steps: ["Distance = Horizontal pixels / (px per m x 2 x tan(FOV / 2))", `Identification = ${hr} / (250 x 2 x ${R(t, 3)}) = ${R(dist(250), 1)} m`],
+      notes: ["Pixel densities are from IEC 62676-4: detection 25, observation 62.5, recognition 125, identification 250 px/m.", "Real results also depend on lighting, lens quality and the camera angle. Treat these as maximum distances."] }; } });
+VIZ[24] = v => { const t = Math.tan(Math.min(v.h, 179.5) * DEG / 2), hr = +v.hres, dist = p => hr / (p * 2 * t), dd = dist(25), s = Math.min(220 / dd, 250 / (dd * t)), cx = 260, cy = 270;
+  let b = `<path d="M${cx} ${cy} L${cx - dd * t * s} ${cy - dd * s} L${cx + dd * t * s} ${cy - dd * s} Z" style="fill:${ST.acc};fill-opacity:.1;stroke:${ST.acc};stroke-width:1"/>`;
+  DORI.forEach((d, i) => { const x = dist(d[1]), y = cy - x * s, hw = x * t * s; b += LN(cx - hw, y, cx + hw, y, { c: PAL[[3, 2, 0, 4][i]], w: 2 }) + T(cx, y - 5, `${d[0]} ${R(x, 1)} m`, { s: 11, b: 1 }); });
+  return SV(520, 296, b + RC(cx - 8, cy, 16, 10, { f: ST.ink, c: "none" }) + T(cx, cy + 24, `camera, ${v.h} deg, ${hr} px wide`, { s: 11, c: ST.mute })); };
+RMAP[24] = { h: "hfov" };
+
+// 25 LED pixel pitch and wall size
+const LEDP = [0.9, 1.2, 1.5, 1.8, 2.5, 3.1, 3.9, 4.8], CABS = { "600x337.5": [600, 337.5], "500x500": [500, 500], "500x1000": [500, 1000] };
+function ledCalc(v) {
+  const want = v.vd / v.fa, rec = LEDP.filter(p => p <= want + 1e-9).pop() || LEDP[0], pitch = has(v.po) && v.po > 0 ? v.po : rec, [cw, ch] = CABS[v.cab] || CABS["600x337.5"],
+    cols = Math.max(1, Math.round(v.ww * 1000 / cw)), rows = Math.max(1, Math.round(v.wh * 1000 / ch)), W = cols * cw / 1000, H = rows * ch / 1000, cx = Math.round(cw / pitch), cy = Math.round(ch / pitch), px = cols * cx, py = rows * cy;
+  return { want, rec, pitch, cw, ch, cols, rows, W, H, cx, cy, px, py, res: px >= 3840 && py >= 2160 ? "4K or larger" : px >= 1920 && py >= 1080 ? "Full HD or larger" : "below Full HD" };
+}
+CALCS.push({ id: 25, name: "LED pixel pitch & wall size", group: "more", about: "Pixel pitch, cabinets and resolution for a direct view LED wall",
+  f: [["vd", "Closest viewer distance (m)", 4], ["fa", "Viewing distance per mm of pitch (m)", 1, "num", null, { h: "1 m per mm is the common minimum rule. 2 to 3 m per mm gives a more comfortable view.", p: [["Minimum 1 m/mm", 1], ["Comfortable 2.5 m/mm", 2.5]] }],
+    ["po", "Pitch to use (mm, blank = recommended)", NaN], ["ww", "Wall width (m)", 4.8], ["wh", "Wall height (m)", 2.7], ["cab", "Cabinet size (mm)", "600x337.5", "sel", ["600x337.5|600 x 337.5 (16:9)", "500x500|500 x 500", "500x1000|500 x 1000"]]],
+  run: v => { const c = ledCalc(v), ok = c.pitch * v.fa <= v.vd + 1e-9;
+    return { head: ["Recommended pixel pitch", R(c.rec, 1), "mm", `pitch used ${R(c.pitch, 1)} mm: ${ok ? "OK for the viewer distance" : "too coarse for " + v.vd + " m"}`],
+      stats: [["Cabinets", `${c.cols} x ${c.rows} = ${c.cols * c.rows}`], ["Wall size", `${R(c.W, 2)} m x ${R(c.H, 2)} m`], ["Resolution", `${c.px} x ${c.py} px (${c.res})`], ["Pixels per cabinet", `${c.cx} x ${c.cy}`], ["Closest comfortable viewing", `${R(c.pitch * v.fa, 1)} m`]],
+      steps: [`Target pitch = ${v.vd} m / ${v.fa} m per mm = ${R(c.want, 2)} mm`, `Largest standard pitch at or below that = ${R(c.rec, 1)} mm`, `Cabinets = ${R(v.ww, 2)} m / ${c.cw} mm = ${c.cols} across, ${R(v.wh, 2)} m / ${c.ch} mm = ${c.rows} high`, `Resolution = ${c.cols} x ${c.cx} by ${c.rows} x ${c.cy}`],
+      notes: ["Check the real pitches and cabinet sizes against the manufacturer's range. Pitches above are common standard steps.", "Pixel count is rounded per cabinet. Check processor limits for total pixels."] }; } });
+VIZ[25] = v => { const c = ledCalc(v), s = Math.min(380 / c.W, 190 / c.H), x0 = 60, y0 = 20; let b = RC(x0, y0, c.W * s, c.H * s, { f: ST.acc, op: .15, c: ST.acc, w: 2 });
+  for (let i = 1; i < c.cols; i++) b += LN(x0 + i * c.cw / 1000 * s, y0, x0 + i * c.cw / 1000 * s, y0 + c.H * s, { c: ST.acc, w: .7 }); for (let j = 1; j < c.rows; j++) b += LN(x0, y0 + j * c.ch / 1000 * s, x0 + c.W * s, y0 + j * c.ch / 1000 * s, { c: ST.acc, w: .7 });
+  const by = y0 + c.H * s + 24; return SV(520, by + 52, b + T(x0 + c.W * s / 2, y0 + c.H * s + 16, `${R(c.W, 2)} m wide, ${c.cols} cabinets`, { s: 11, c: ST.mute }) + T(x0 - 6, y0 + c.H * s / 2, `${R(c.H, 2)} m`, { a: "end", s: 11, c: ST.mute }) + T(x0 + c.W * s / 2, by + 20, `${c.px} x ${c.py} px at ${R(c.pitch, 1)} mm pitch`, { s: 12, c: ST.acc, b: 1 }) + T(x0 + c.W * s / 2, by + 38, `viewer at ${v.vd} m or more`, { s: 11, c: ST.mute })); };
+
+// 26 video wall builder
+function wallCalc(v) {
+  const dm = v.dg * 25.4, a = aspect(v.ar), ph = dm / Math.sqrt(1 + a * a), pw = ph * a, [rw, rh] = String(v.rs).split("x").map(Number), cols = Math.max(1, Math.round(v.c)), rows = Math.max(1, Math.round(v.r)),
+    W = cols * pw + (cols - 1) * v.g, H = rows * ph + (rows - 1) * v.g, pitch = pw / rw;
+  return { pw, ph, rw, rh, cols, rows, W, H, pitch, px: cols * rw, py: rows * rh, mp: cols * rw * rows * rh / 1e6, diag: Math.hypot(W, H) / 25.4, comp: v.g / pitch };
+}
+CALCS.push({ id: 26, name: "Video wall builder", group: "more", about: "Size, resolution and outputs for an LCD video wall",
+  f: [["dg", "Display diagonal (in)", 55, "sel", ["46|46", "49|49", "55|55", "65|65"]], ["ar", "Aspect ratio", "16:9", "sel", ARS], ["rs", "Panel resolution", "1920x1080", "sel", ["1920x1080|Full HD", "3840x2160|4K"]], ["c", "Columns", 3], ["r", "Rows", 3], ["g", "Seam between active areas (mm)", 3.5, "num", null, { h: "Twice the bezel plus the mounting gap. Typical 1.8 to 5 mm." }]],
+  run: v => { const c = wallCalc(v);
+    return { head: ["Wall size", `${R(c.W / 1000, 2)} x ${R(c.H / 1000, 2)}`, "m", `${R(c.diag, 0)}" overall diagonal, ${c.cols} x ${c.rows} panels`],
+      stats: [["Panels", String(c.cols * c.rows)], ["Total resolution", `${c.px} x ${c.py} px (${R(c.mp, 1)} MP)`], ["Pixel pitch", `${R(c.pitch, 2)} mm`], ["Seam in pixels", `${R(c.comp, 1)} px (set in the controller to compensate)`], ["Controller outputs", `${c.cols * c.rows} (one per panel)`], ["Panel active size", `${R(c.pw, 0)} x ${R(c.ph, 0)} mm`]],
+      steps: [`Panel width = diagonal x 25.4 / sqrt(1 + a^2) x a = ${R(c.pw, 0)} mm, height = ${R(c.ph, 0)} mm`, `Wall width = ${c.cols} x ${R(c.pw, 0)} + ${c.cols - 1} x ${v.g} = ${R(c.W, 0)} mm`, `Wall height = ${c.rows} x ${R(c.ph, 0)} + ${c.rows - 1} x ${v.g} = ${R(c.H, 0)} mm`],
+      notes: ["Active-area sizes are calculated from the diagonal. Use the datasheet dimensions for drawings and mounting.", "A processor with one output per panel is the simplest option. For 4K panels, check that each output supports 4K at 60 Hz."] }; } });
+VIZ[26] = v => { const c = wallCalc(v), s = Math.min(380 / c.W, 200 / c.H), x0 = 70, y0 = 20; let b = "";
+  for (let i = 0; i < c.cols; i++) for (let j = 0; j < c.rows; j++) b += RC(x0 + i * (c.pw + v.g) * s, y0 + j * (c.ph + v.g) * s, c.pw * s, c.ph * s, { f: ST.acc, op: (i + j) % 2 ? .22 : .12, c: ST.acc, w: 1 });
+  return SV(520, y0 + c.H * s + 60, b + T(x0 + c.W * s / 2, y0 + c.H * s + 18, `${R(c.W / 1000, 2)} m`, { s: 11, c: ST.mute }) + T(x0 - 6, y0 + c.H * s / 2, `${R(c.H / 1000, 2)} m`, { a: "end", s: 11, c: ST.mute }) + T(x0 + c.W * s / 2, y0 + c.H * s + 42, `${c.px} x ${c.py} px, ${c.cols * c.rows} outputs`, { s: 12, c: ST.acc, b: 1 })); };
+RMAP[26] = { ar: "ar" };
+
 showList();

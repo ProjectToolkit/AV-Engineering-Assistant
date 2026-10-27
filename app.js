@@ -1,6 +1,6 @@
 const $ = id => document.getElementById(id);
 let BOM = [], PULL = [], PAGES = [], LAST_AUDIT = [];
-document.querySelectorAll(".tab").forEach(b => b.onclick = () => { document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", x == b)); ["t1","t2","t3","t4","t5"].forEach(t => $(t).hidden = t != b.dataset.t); document.querySelector(".bar").style.display = ["t1","t3"].includes(b.dataset.t) ? "" : "none"; });
+document.querySelectorAll(".tab").forEach(b => b.onclick = () => { document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", x == b)); ["t1","t2","t3","t4","t5","t6"].forEach(t => $(t).hidden = t != b.dataset.t); document.querySelector(".bar").style.display = ["t1","t3"].includes(b.dataset.t) ? "" : "none"; });
 // ---------- parsing
 const g = (r, ...n) => { for (const k in r) if (n.includes(nk(k)) && String(r[k]).trim() !== "") return String(r[k]).trim(); return ""; };
 const num = (r, ...n) => parseFloat(g(r, ...n)) || 0;

@@ -1,7 +1,7 @@
 // AV Engineering Assistant - project, room design, design checklist, room summary, export.
 // Depends on app.js (BOM, PULL, LAST_AUDIT) and calcs.js (ROOM, PROJ, CALCS, VIZ and the SVG helpers).
-const APP_VERSION = "1.1.0", APP_DATE = "26 Oct 2026";
-const verEl = document.getElementById("ver"); if (verEl) verEl.textContent = `AV Engineering Assistant v${APP_VERSION} - ${APP_DATE} - Created by Andrew Scofield`;
+const APP_VERSION = "1.2.0", APP_DATE = "27 Oct 2026";
+const verEl = document.getElementById("ver"); if (verEl) verEl.textContent = `AV Engineering Assistant - ${APP_DATE} - Created by Andrew Scofield`; const vb = document.getElementById("vbadge"); if (vb) vb.textContent = "v" + APP_VERSION;
 
 // ---------- small helpers
 function toast(m) { let t = cq("toast"); if (!t) { t = document.createElement("div"); t.id = "toast"; t.style.cssText = "position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:#1b2d5e;color:#fff;padding:9px 16px;border-radius:10px;font-size:13px;z-index:50;box-shadow:0 6px 24px rgba(0,0,0,.35)"; document.body.appendChild(t); } t.textContent = m; t.style.display = "block"; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = "none", 2600); }
@@ -99,7 +99,9 @@ function roomPlanSvg() {
   let b = `<clipPath id="${id}"><rect x="${x0}" y="${y0}" width="${rw * s}" height="${rl * s}"/></clipPath><path clip-path="url(#${id})" d="M${cx} ${y0} L${cx - ext} ${py(rl)} L${cx + ext} ${py(rl)} Z" style="fill:${ST.acc};fill-opacity:.1"/>`;
   b += RC(x0, y0, rw * s, rl * s, { c: ST.mute, w: 2 });
   const D1 = calcValues(CALCS[0]); const a = aspect(D1.ar), eh = D1.eh / 100; let ih = roomVal("fv") / (D1.k * eh); const iw = Math.min(ih * a, rw * 0.95), diag = ih * 39.3701 * Math.sqrt(1 + a * a);
-  b += RC(cx - iw * s / 2, y0 - 7, iw * s, 7, { f: ST.ink, c: ST.ink, r: 1 }) + T(cx + iw * s / 2 + 6, y0 - 1, `display ${R(diag, 0)}"`, { a: "start", s: 10, c: ST.mute });
+  const nd = Math.max(1, Math.round(ROOM.nd || 1)), dw = Math.min(iw, rw * 0.95 / nd - 0.1), tot = nd * dw + (nd - 1) * 0.1;
+  for (let i = 0; i < nd; i++) b += RC(cx - tot * s / 2 + i * (dw + 0.1) * s, y0 - 7, dw * s, 7, { f: ST.ink, c: ST.ink, r: 1 });
+  b += T(cx + tot * s / 2 + 6, y0 - 1, `${nd > 1 ? nd + " x " : "display "}${R(diag, 0)}"`, { a: "start", s: 10, c: ST.mute });
   const n = Math.max(0, Math.round(ROOM.seats)), sp = tl / Math.max(n, 1), tx = cx - tw * s / 2, ty = py(td);
   for (let i = 0; i < n; i++) { const yy = ty + (i + .5) * sp * s; b += RC(tx - 14, yy - 6, 10, 12, { r: 3, c: ST.mute, w: 1 }) + RC(tx + tw * s + 4, yy - 6, 10, 12, { r: 3, c: ST.mute, w: 1 }); }
   b += RC(tx, ty, tw * s, tl * s, { f: tc, op: .25, c: tc, w: 2, r: 4 });
@@ -120,6 +122,7 @@ function designChecks() {
     const v = calcValues(CALCS[0]); v.u = "m"; v.fv = roomVal("fv"); const a = aspect(v.ar), k = Math.sqrt(1 + a * a); let ih = v.fv / (v.k * v.eh / 100); if (v.m == "ADM") ih = Math.max(ih, v.fv / 4);
     const diag = ih * 39.3701 * k, pick = STD_DIAG.find(d => d >= diag - 1e-9), cl = 1.4 * ih * a;
     add(pick ? "PASS" : "FAIL", "Display", "A standard panel size exists", pick ? `Needs ${R(diag, 0)}" - nearest standard panel ${pick}".` : `Needs ${R(diag, 0)}" which is larger than a 110" panel. Use a video wall or projection.`);
+    const nd = Math.max(1, Math.round(ROOM.nd || 1)); if (nd > 1) add(nd * ih * a + (nd - 1) * 0.1 <= ROOM.rw * 0.95 ? "PASS" : "FAIL", "Display", `${nd} displays fit on the front wall`, `${nd} x ${R(ih * a)} m wide = ${R(nd * ih * a + (nd - 1) * 0.1)} m against a ${R(ROOM.rw)} m wall.`);
     add(ROOM.td >= cl ? "PASS" : "WARN", "Display", "Nearest viewer is not too close", `Nearest seat ${R(ROOM.td)} m from the display wall; 1.4 x image width = ${R(cl)} m.`);
   } catch (e) { }
   try { // camera
@@ -157,7 +160,7 @@ function checksHtml(list) {
 }
 function roomSummaryHtml() {
   let h = docHead(PROJ.name || "Room design summary"); const R_ = ROOM;
-  h += `<h3>Room</h3>${roomPlanSvg()}<table>${[["Room", `${R(R_.rw)} x ${R(R_.rl)} m, ceiling ${R(R_.ch)} m`], ["Table", `${R(R_.tw)} x ${R(R_.tl)} m, ${R(R_.td)} m from the camera wall`], ["Farthest viewer", `${R(roomVal("fv"))} m`], ["Camera", `${R(R_.hfov, 0)}° HFOV`], ["Display", `${R_.ar}, ${R_.eh}% element height`], ["Planned mics / speakers", `${has(R_.nm) ? R_.nm : "not set"} / ${has(R_.ns) ? R_.ns : "not set"}`]].map(r => `<tr><td ${TDL}>${r[0]}</td><td ${TD}>${r[1]}</td></tr>`).join("")}</table>`;
+  h += `<h3>Room</h3>${roomPlanSvg()}<table>${[["Room", `${R(R_.rw)} x ${R(R_.rl)} m, ceiling ${R(R_.ch)} m`], ["Table", `${R(R_.tw)} x ${R(R_.tl)} m, ${R(R_.td)} m from the camera wall`], ["Farthest viewer", `${R(roomVal("fv"))} m`], ["Camera", `${R(R_.hfov, 0)}° HFOV`], ["Display", `${R_.ar}, ${R_.eh}% element height`], ["Displays", `${Math.max(1, Math.round(R_.nd || 1))}`], ["Microphones / speakers", `${has(R_.nm) ? R_.nm : "calculated"} / ${has(R_.ns) ? R_.ns : "calculated"}`]].map(r => `<tr><td ${TDL}>${r[0]}</td><td ${TD}>${r[1]}</td></tr>`).join("")}</table>`;
   [1, 2, 3, 4, 5, 14].forEach(id => { const c = CALCS.find(x => x.id == id); try { const v = calcValues(c), r = c.run(v); let dg = ""; try { dg = VIZ[id] ? VIZ[id](v) : ""; } catch (e) { } h += calcBlock(c, r, dg, { brief: true }); } catch (e) { } });
   return h + checksHtml(designChecks());
 }

@@ -14,9 +14,9 @@ const aspect = s => { const [w, h] = String(s).split(":").map(Number); return w 
 const lines = t => String(t || "").split("\n").map(s => s.trim()).filter(Boolean);
 // ---------- room model (shared by the Project tab and the calculators)
 const ROOM_FIELDS = [["rw", "Room width (m)", 6], ["rl", "Room length (m)", 8], ["ch", "Ceiling height (m)", 2.7], ["tw", "Table width, across the room (m)", 1.2], ["tl", "Table length, away from the camera (m)", 3.6],
-  ["td", "Camera wall to nearest table edge (m)", 1.0], ["seats", "Seats along each side of the table", 6], ["fv", "Farthest viewer (m, blank = far end of table)", NaN], ["ar", "Display aspect ratio", "16:9"], ["eh", "Display % element height", 2.5], ["bot", "Display bottom above floor (m)", 1.0],
+  ["td", "Camera wall to nearest table edge (m)", 1.0], ["seats", "Seats along each side of the table", 6], ["fv", "Farthest viewer (m, blank = far end of table)", NaN], ["ar", "Display aspect ratio", "16:9"], ["eh", "Display % element height", 2.5], ["bot", "Display bottom above floor (m)", 1.0], ["nd", "Number of displays", 1],
   ["hfov", "Camera horizontal FOV (deg)", 90], ["th", "Talker mouth height (m)", 1.2], ["ear", "Listener ear height (m)", 1.2], ["af", "Floor absorption (alpha)", 0.2], ["ac", "Ceiling absorption (alpha)", 0.6], ["aw", "Wall absorption (alpha)", 0.1],
-  ["tg", "Target RT60 (s)", 0.5], ["nm", "Planned ceiling mics (optional)", NaN], ["ns", "Planned ceiling speakers (optional)", NaN]];
+  ["tg", "Target RT60 (s)", 0.5], ["nm", "Number of ceiling microphones (blank = calculate)", NaN], ["ns", "Number of ceiling speakers (blank = calculate)", NaN]];
 const ROOM = Object.fromEntries(ROOM_FIELDS.map(f => [f[0], f[2]]));
 const PROJ = { name: "", calcs: {} };
 // calculator field -> room key
@@ -197,6 +197,7 @@ function resultHtml(c, r, v) {
 }
 
 const plannedWrap = (i, key, what) => { const f0 = CALCS[i].run; CALCS[i].run = v => { const r = f0(v), n = +r.head[1], p = ROOM[key]; if (has(p) && r.stats) r.stats.push([`Planned ${what} in room design`, `${p} planned, ${n} needed - ${p >= n ? "OK" : "SHORT by " + (n - p)}`]); return r; }; };
+{ const f0 = CALCS[0].run; CALCS[0].run = v => { const r = f0(v), n = Math.max(1, Math.round(ROOM.nd || 1)); if (n > 1 && r.stats) { const iw = parseFloat(r.stats[0][1]); r.stats.push([`Displays in room design`, `${n} displays, each sized as above (${R(iw * n, 2)} ${v.u == "ft" ? "ft" : "m"} of screen width in total)`]); } return r; }; }
 plannedWrap(3, "nm", "microphones"); plannedWrap(4, "ns", "speakers");
 // ---------- diagrams (inline SVG, theme-aware). Drawn from the same inputs as run(); not to scale for labels.
 const ST = { ink: "var(--ink)", mute: "var(--mute)", acc: "var(--accent-text)", line: "var(--line)" };
